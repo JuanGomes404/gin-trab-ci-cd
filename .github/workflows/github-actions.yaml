@@ -1,0 +1,42 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9.2'
+
+      - name: Install gcloud CLI
+        run: |
+          curl https://sdk.cloud.google.com | bash
+          exec -l $SHELL
+          gcloud components update
+
+      - name: Configure Google Cloud SDK
+        env:
+          CLOUDSDK_PYTHON: /usr/bin/python3.9.2  # Substitua pelo caminho correto para o Python 3.5 ou superior, caso necessário
+        run: |
+          gcloud auth activate-service-account conta-servico@angular-app-cep.iam.gserviceaccount.com --key-file -  # Substitua pelo seu email de serviço
+          gcloud container clusters get-credentials gin-prd --zone us-central1-a  # Substitua pelos dados do seu cluster GKE
+          kubectl config set-context --current --namespace=gin-prd  # Substitua pelo nome do namespace específico
+
+      - name: Deploy to GKE
+        run: |
+          kubectl apply -f deployment.yaml
+          kubectl apply -f service.yaml
